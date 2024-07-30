@@ -1,0 +1,20 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>Dependency Grammar Graphs</title>
+</head>
+<body>
+    <h1>Dependency Grammar Graphs</h1>
+    <form method="post" action="/">
+        <textarea name="sentences" rows="10" cols="50"></textarea><br>
+        <input type="submit" value="Generate Graphs">
+    </form>
+    {% if images %}
+        <h2>Generated Graphs:</h2>
+        {% for index in images %}
+            <img src="{{ url_for('get_image', index=index) }}" alt="Dependency Graph">
+        {% endfor %}
+    {% endif %}
+</body>
+</html>
