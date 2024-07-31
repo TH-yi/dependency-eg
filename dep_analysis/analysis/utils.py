@@ -1,6 +1,6 @@
 import spacy
 from spacy import displacy
-from .models import DependencyData, DependencyDataArticle
+from .models import DependencyData, DependencyDataArticle, DependencyDataExamples
 import os
 from django.conf import settings
 import re
@@ -19,7 +19,7 @@ def split_multi_sents(text):
     return list(segmenter.split_multi(text))
 
 
-def parse_and_save_sentences(sentences, is_article=False):
+def parse_and_save_sentences(sentences, is_article=False, is_example=False):
     for sentence in sentences:
         try:
             # 使用spaCy处理句子
@@ -29,6 +29,8 @@ def parse_and_save_sentences(sentences, is_article=False):
             valid_filename = re.sub(r'[^a-zA-Z0-9_\-]', '_', sentence[:50])
             if is_article:
                 image_path = os.path.join(settings.MEDIA_ROOT, 'media_article')
+            elif is_example:
+                image_path = os.path.join(settings.MEDIA_ROOT, 'media_examples')
             else:
                 image_path = settings.MEDIA_ROOT
 
@@ -67,6 +69,25 @@ def parse_and_save_sentences(sentences, is_article=False):
                         relation_data=relation_data
                     )
                     logger.info(f"Saved DependencyDataArticle for sentence: {sentence[:50]}")
+            elif is_example:
+                # 检查句子是否存在
+                existing_record = DependencyDataExamples.objects.filter(sentence=sentence).first()
+                if existing_record:
+                    # 更新现有记录
+                    existing_record.dep_svg_path = svg_path
+                    existing_record.object_data = object_data
+                    existing_record.relation_data = relation_data
+                    existing_record.save()
+                    logger.info(f"Updated DependencyDataExamples for sentence: {sentence[:50]}")
+                else:
+                    # 创建新记录
+                    DependencyDataExamples.objects.create(
+                        sentence=sentence,
+                        dep_svg_path=svg_path,
+                        object_data=object_data,
+                        relation_data=relation_data
+                    )
+                    logger.info(f"Saved DependencyDataExamples for sentence: {sentence[:50]}")
             else:
                 # 检查句子是否存在
                 existing_record = DependencyData.objects.filter(sentence=sentence).first()
@@ -92,17 +113,5 @@ def parse_and_save_sentences(sentences, is_article=False):
             logger.error(str(e))
 
 
-def process_text_file(file_path):
-    try:
-        with open(file_path, 'r', encoding='utf-8') as f:
-            text = f.read()
-            logger.info(f"Read text file: {file_path}")
-
-        sentences = split_multi_sents(text)
-        logger.info(f"Split text into {len(sentences)} sentences")
-
-        parse_and_save_sentences(sentences, is_article=True)
-
-    except Exception as e:
-        logger.error(f"Error processing file: {file_path}")
-        logger.error(str(e))
+def process_sentence_examples(sentence_examples):
+    parse_and_save_sentences(sentence_examples, is_example=True)
